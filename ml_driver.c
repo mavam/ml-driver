@@ -28,7 +28,8 @@
 #include <linux/ioctl.h>
 
 #include <asm/uaccess.h>		/* copy_*_user */
-
+#include <linux/semaphore.h>
+#define init_MUTEX(sem)         sema_init(sem, 1)// 
 /*
  * Debugging 
  */
@@ -62,8 +63,8 @@ if ((debug_level & DEBUG_LEVEL_CRITICAL) == DEBUG_LEVEL_CRITICAL) \
 /* 
  * USB Missile Launcher 
  */
-#define ML_VENDOR_ID	0x1941
-#define ML_PRODUCT_ID	0x8021
+#define ML_VENDOR_ID	0x1eab//0x1941 //idVendor           0x1eab  idProduct          0x0d02 
+#define ML_PRODUCT_ID	0x0d02//0x8021
 
 #define ML_CTRL_BUFFER_SIZE 	8
 #define ML_CTRL_REQEUST_TYPE	0x21
