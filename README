@@ -47,3 +47,18 @@ problems.
 
 
 Matthias Vallentin <vallentin@icir.org>
+
+
+//////////////////////////////////////////////////////
+Another workaround 
+/////////////////////////////////////////////////////
+
+If you know the product id and vendor id of usb serial device, then you can register it while insmod of usbserial driver.
+e.g.
+run "modprobe usbserial vendor=0x1eab product=0x0d02"
+
+You can get the product id and vendor id by using "lsusb" command.
+
+
+Gaurav Kumar <gauravkumar552@gmail.com>
+
