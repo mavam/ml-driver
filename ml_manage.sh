@@ -3,17 +3,15 @@ module="ml_driver"
 devname="usb_device"
 device="ml"
 mode=664
-group="wheel"
+group="plugdev"
 
-load()
+replace_nodes() 
 {
-	shift
-	insmod ./${module}.ko $* || exit 1
-
 	# Remove stale nodes
 	rm -f /dev/${device}[0-3]
 
 	major=$(awk "\$2==\"${devname}\" {print \$1}" /proc/devices)
+	echo $major
 
 	for i in 0 1 2 3; do
 		mknod -m ${mode} "/dev/${device}${i}" c ${major} ${i}
@@ -22,6 +20,18 @@ load()
 	done
 
 	chgrp ${group} /dev/${device}[0-3]
+}
+
+load()
+{	
+	shift
+
+	rmmod usbhid
+
+	insmod ./${module}.ko $* || exit 1
+
+	# The following screws up the properly created /dev/ml0 device on my system!
+	# replace_nodes	
 }
 
 unload()
