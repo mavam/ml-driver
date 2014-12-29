@@ -7,7 +7,7 @@ else
 	DBGFLAGS = -O2
 endif
 
-CFLAGS += $(DBGFLAGS)
+ccflags-y += $(DBGFLAGS)
 
 
 ifneq ($(KERNELRELEASE),)
