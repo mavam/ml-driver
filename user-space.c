@@ -9,6 +9,7 @@
 #define ML_STOP         0x00
 #define ML_UP           0x01
 #define ML_DOWN         0x02
+#define ML_LED          0x03
 #define ML_LEFT         0x04
 #define ML_RIGHT        0x08
 #define ML_FIRE         0x10
@@ -21,13 +22,13 @@ void send_cmd(int fd, int cmd)
 
 	retval = write(fd, &cmd, 1);
 	if (retval < 0)
-		fprintf(stderr, "could not send command to %d\n", retval);
+		fprintf(stderr, "could not send command to fd=%d\n", fd);
 }
 
 static void usage(char *name)
 {
 	fprintf(stderr,
-			"\nusage: %s [-mslrudfch] [-t <msecs>]\n\n"
+			"\nusage: %s [-mbslrudfch] [-t <msecs>]\n\n"
 			"  -m      missile launcher [/dev/ml0]\n"
 			"  -s      stop\n"
 			"  -l      turn left\n"
@@ -35,6 +36,7 @@ static void usage(char *name)
 			"  -u      turn up\n"
 			"  -d      turn down\n"
 			"  -f      fire\n"
+			"  -b      blink leds\n"
 			"  -t      specify send_cmdment duration in milli seconds\n"
 			"  -c      calibrate the missile launcher axes\n"
 			"  -h      display this help\n\n"
@@ -57,7 +59,7 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		usage(argv[0]);
 
-	while ((c = getopt(argc, argv, "mslrudfcht:")) != -1) {
+	while ((c = getopt(argc, argv, "m:bslrudfcht:")) != -1) {
 		switch (c) {
 			case 'm': dev = optarg;
 					  break;
@@ -70,6 +72,8 @@ int main(int argc, char *argv[])
 			case 'd': cmd |= ML_DOWN;
 					  break;
 			case 'f': cmd = ML_FIRE;
+					  break;
+			case 'b': cmd = ML_LED;
 					  break;
 			case 's': cmd = ML_STOP;
 					  break;
@@ -85,12 +89,14 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	printf("Open device %s\n", dev);
 	fd = open(dev, O_RDWR);
 	if (fd == -1) {
 		perror("open");
 		exit(1);
 	}
 
+	printf("Send command %i\n", cmd);
 	send_cmd(fd, cmd);
 
 	if (cmd & ML_FIRE) 
