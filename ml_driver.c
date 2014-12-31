@@ -29,9 +29,6 @@
 
 #include <asm/uaccess.h>		/* copy_*_user */
 
-/*
- * Debugging 
- */
 #define DEBUG_LEVEL_DEBUG		0x1F
 #define DEBUG_LEVEL_INFO		0x0F
 #define DEBUG_LEVEL_WARN		0x07
@@ -66,7 +63,7 @@ if ((debug_level & DEBUG_LEVEL_CRITICAL) == DEBUG_LEVEL_CRITICAL) \
 
 #if MISSILE_LAUNCHER == ML_THUNDER
 
-/* 
+/*
  * USB Missile Launcher Thunder version (with LEDs)
  */
 #define ML_VENDOR_ID	0x2123
@@ -74,7 +71,7 @@ if ((debug_level & DEBUG_LEVEL_CRITICAL) == DEBUG_LEVEL_CRITICAL) \
 
 #else
 
-/* 
+/*
  * USB Missile Launcher default version
  */
 #define ML_VENDOR_ID	0x1941
@@ -85,7 +82,7 @@ if ((debug_level & DEBUG_LEVEL_CRITICAL) == DEBUG_LEVEL_CRITICAL) \
 #define ML_CTRL_BUFFER_SIZE 	8
 #define ML_CTRL_REQUEST_TYPE	0x21
 #define ML_CTRL_REQUEST		0x09
-#define ML_CTRL_VALUE		0x0	
+#define ML_CTRL_VALUE		0x0
 #define ML_CTRL_INDEX		0x0
 
 #define ML_STOP			0x00
@@ -115,25 +112,25 @@ if ((debug_level & DEBUG_LEVEL_CRITICAL) == DEBUG_LEVEL_CRITICAL) \
 
 struct usb_ml {
 	struct usb_device 	*udev;
-	struct usb_interface *interface;
-	unsigned char 		minor;
-	char				serial_number[8];
+	struct usb_interface 	*interface;
+	unsigned char		minor;
+	char			serial_number[8];
 
-	int					open_count;		/* Open count for this port */
-	struct 				semaphore sem;	/* Locks this structure */
-	spinlock_t			cmd_spinlock;	/* locks dev->command */
+	int			open_count;     /* Open count for this port */
+	struct 			semaphore sem;	/* Locks this structure */
+	spinlock_t		cmd_spinlock;	/* locks dev->command */
 
-	char 				*int_in_buffer;
-	struct usb_endpoint_descriptor *int_in_endpoint;
+	char				*int_in_buffer;
+	struct usb_endpoint_descriptor  *int_in_endpoint;
 	struct urb 			*int_in_urb;
-	int					int_in_running;
+	int				int_in_running;
 
-	char				*ctrl_buffer;	/* 8 byte buffer for the control msg */
-	struct urb			*ctrl_urb;
-	struct usb_ctrlrequest *ctrl_dr;	/* Setup packet information */
-	int					correction_required;
+	char			*ctrl_buffer; /* 8 byte buffer for ctrl msg */
+	struct urb		*ctrl_urb;
+	struct usb_ctrlrequest  *ctrl_dr;     /* Setup packet information */
+	int			correction_required;
 
-	__u8				command;		/* Last issued command */
+	__u8			command;/* Last issued command */
 };
 
 static struct usb_device_id ml_table [] = {
@@ -157,9 +154,9 @@ static inline void ml_debug_data(const char *function, int size,
 		const unsigned char *data)
 {
 	int i;
-
 	if ((debug_level & DEBUG_LEVEL_DEBUG) == DEBUG_LEVEL_DEBUG) {
-		printk(KERN_DEBUG "[debug] %s: length = %d, data = ", function, size);
+		printk(KERN_DEBUG "[debug] %s: length = %d, data = ",
+		       function, size);
 		for (i = 0; i < size; ++i)
 			printk("%.2x ", data[i]);
 		printk("\n");
@@ -168,7 +165,7 @@ static inline void ml_debug_data(const char *function, int size,
 
 static void ml_abort_transfers(struct usb_ml *dev)
 {
-	if (! dev) { 
+	if (! dev) {
 		DBG_ERR("dev is NULL");
 		return;
 	}
@@ -241,17 +238,18 @@ static void ml_int_in_callback(struct urb *urb)
 		if (dev->int_in_buffer[0] & ML_MAX_UP && dev->command & ML_UP) {
 			dev->command &= ~ML_UP;
 			dev->correction_required = 1;
-		} else if (dev->int_in_buffer[0] & ML_MAX_DOWN && 
+		} else if (dev->int_in_buffer[0] & ML_MAX_DOWN &&
 				dev->command & ML_DOWN) {
 			dev->command &= ~ML_DOWN;
 			dev->correction_required = 1;
 		}
 
-		if (dev->int_in_buffer[1] & ML_MAX_LEFT && dev->command & ML_LEFT) {
+		if (dev->int_in_buffer[1] & ML_MAX_LEFT
+		    && dev->command & ML_LEFT) {
 			dev->command &= ~ML_LEFT;
 			dev->correction_required = 1;
-		} else if (dev->int_in_buffer[1] & ML_MAX_RIGHT && 
-				dev->command & ML_RIGHT) {
+		} else if (dev->int_in_buffer[1] & ML_MAX_RIGHT
+			   && dev->command & ML_RIGHT) {
 			dev->command &= ~ML_RIGHT;
 			dev->correction_required = 1;
 		}
@@ -264,7 +262,7 @@ static void ml_int_in_callback(struct urb *urb)
 			if (retval) {
 				DBG_ERR("submitting correction control URB failed (%d)",
 						retval);
-			} 
+			}
 		} else {
 			spin_unlock(&dev->cmd_spinlock);
 		}
@@ -321,7 +319,8 @@ static int ml_open(struct inode *inode, struct file *file)
 
 	/* Initialize interrupt URB. */
 	usb_fill_int_urb(dev->int_in_urb, dev->udev,
-			usb_rcvintpipe(dev->udev, dev->int_in_endpoint->bEndpointAddress),
+			usb_rcvintpipe(dev->udev,
+				       dev->int_in_endpoint->bEndpointAddress),
 			dev->int_in_buffer,
 			le16_to_cpu(dev->int_in_endpoint->wMaxPacketSize),
 			ml_int_in_callback,
@@ -341,7 +340,7 @@ static int ml_open(struct inode *inode, struct file *file)
 
 	/* Save our object in the file's private structure. */
 	file->private_data = dev;
-	
+
 unlock_exit:
 	up(&dev->sem);
 
@@ -437,11 +436,10 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 		goto unlock_exit;
 	}
 
-	/* FIXME: does this impose too much policy restrictions? */
-	policy = (cmd == ML_STOP || cmd == ML_UP || cmd == ML_DOWN || cmd == ML_LEFT
-				|| cmd == ML_RIGHT || cmd == ML_UP_LEFT || cmd == ML_DOWN_LEFT
-				|| cmd == ML_UP_RIGHT || cmd == ML_DOWN_RIGHT 
-				|| cmd == ML_FIRE);
+	policy = (cmd == ML_STOP || cmd == ML_UP || cmd == ML_DOWN
+		  || cmd == ML_LEFT || cmd == ML_RIGHT || cmd == ML_UP_LEFT
+		  || cmd == ML_DOWN_LEFT || cmd == ML_UP_RIGHT
+		  || cmd == ML_DOWN_RIGHT || cmd == ML_FIRE);
 #if MISSILE_LAUNCHER == ML_THUNDER
 	policy = policy || (cmd == ML_LED);
 #endif
@@ -478,7 +476,7 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 			ML_CTRL_INDEX,
 			&buf,
 			sizeof(buf),
-			HZ*5);	
+			HZ*5);
 
 	if (retval < 0) {
 		DBG_ERR("usb_control_msg failed (%d)", retval);
@@ -486,15 +484,15 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 	}
 
 	/* We should have written only one byte. */
-	retval = count;	
+	retval = count;
 
 unlock_exit:
 	up(&dev->sem);
 
-exit: 
+exit:
 	return retval;
 }
-	
+
 
 static struct file_operations ml_fops = {
 	.owner =	THIS_MODULE,
@@ -509,8 +507,8 @@ static struct usb_class_driver ml_class = {
 	.minor_base = ML_MINOR_BASE,
 };
 
-static int ml_probe(struct usb_interface *interface, const struct usb_device_id
-		*id)
+static int ml_probe(struct usb_interface *interface,
+		    const struct usb_device_id *id)
 {
 	struct usb_device *udev = interface_to_usbdev(interface);
 	struct usb_ml *dev = NULL;
@@ -545,9 +543,10 @@ static int ml_probe(struct usb_interface *interface, const struct usb_device_id
 	for (i = 0; i < iface_desc->desc.bNumEndpoints; ++i) {
 		endpoint = &iface_desc->endpoint[i].desc;
 
-		if (((endpoint->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_DIR_IN)
-				&& ((endpoint->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) ==
-					USB_ENDPOINT_XFER_INT)) 
+		if (((endpoint->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
+		     == USB_DIR_IN)
+		    && ((endpoint->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK)
+		    	== USB_ENDPOINT_XFER_INT))
 			dev->int_in_endpoint = endpoint;
 
 	}
@@ -608,8 +607,8 @@ static int ml_probe(struct usb_interface *interface, const struct usb_device_id
 			dev);
 
 	/* Retrieve a serial. */
-	if (! usb_string(udev, udev->descriptor.iSerialNumber, dev->serial_number,
-				sizeof(dev->serial_number))) {
+	if (! usb_string(udev, udev->descriptor.iSerialNumber,
+			 dev->serial_number, sizeof(dev->serial_number))) {
 		DBG_ERR("could not retrieve serial number");
 		goto error;
 	}
@@ -627,7 +626,7 @@ static int ml_probe(struct usb_interface *interface, const struct usb_device_id
 
 	dev->minor = interface->minor;
 
-	DBG_INFO("USB missile launcher now attached to /dev/ml%d", 
+	DBG_INFO("USB missile launcher now attached to /dev/ml%d",
 			interface->minor - ML_MINOR_BASE);
 
 exit:
@@ -666,7 +665,7 @@ static void ml_disconnect(struct usb_interface *interface)
 
 	mutex_unlock(&disconnect_mutex);
 
-	DBG_INFO("USB missile launcher /dev/ml%d now disconnected", 
+	DBG_INFO("USB missile launcher /dev/ml%d now disconnected",
 			minor - ML_MINOR_BASE);
 }
 
