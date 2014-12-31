@@ -6,17 +6,18 @@ USB missile launcher. I developed it mainly to gain experience in kernel driver
 hacking. Hence it is mereley a skeleton and not very sophisticated.
 
 For more information about how the driver has been created, have a look at
-the [article][blog-post] describing the development process in detail.
+the [article][blog-post] which describes the development process in detail.
 
 [blog-post]: http://matthias.vallentin.net/blog/2007/04/writing-a-linux-kernel-driver-for-an-unknown-usb-device/
 
-Dependencies
-============
+Compatibility
+=============
 
-- Linux kernel version >= 2.6.17
-- GNU make
+Linux:
+  - **3.16**
 
-Note: I haven't tested the driver with kernel versions greater than 2.6.17.
+Tested on:
+  - *Ubuntu 3.16.0 x86_64* (by [mrquincle](https://github.com/mrquincle))
 
 Usage
 =====
