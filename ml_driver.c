@@ -29,10 +29,6 @@
 
 #include <asm/uaccess.h>		/* copy_*_user */
 
-#ifndef init_MUTEX
-#define init_MUTEX(X) sema_init(X,1)
-#endif
-
 /*
  * Debugging 
  */
@@ -525,7 +521,7 @@ static int ml_probe(struct usb_interface *interface, const struct usb_device_id
 
 	dev->command = ML_STOP;
 
-	init_MUTEX(&dev->sem);
+	sema_init(&dev->sem, 1);
 	spin_lock_init(&dev->cmd_spinlock);
 
 	dev->udev = udev;
