@@ -59,33 +59,53 @@ if ((debug_level & DEBUG_LEVEL_CRITICAL) == DEBUG_LEVEL_CRITICAL) \
 	printk( KERN_DEBUG "[crit]  %s(%d): " fmt "\n", \
 			__FUNCTION__, __LINE__, ## args)
 
+#define ML_DEFAULT 0
+#define ML_THUNDER 1
+
+#define MISSILE_LAUNCHER ML_DEFAULT
+
+#if MISSILE_LAUNCHER == ML_THUNDER
+
 /* 
- * USB Missile Launcher 
+ * USB Missile Launcher Thunder version (with LEDs)
+ */
+#define ML_VENDOR_ID	0x2123
+#define ML_PRODUCT_ID	0x1010
+
+#else
+
+/* 
+ * USB Missile Launcher default version
  */
 #define ML_VENDOR_ID	0x1941
 #define ML_PRODUCT_ID	0x8021
 
+#endif
+
 #define ML_CTRL_BUFFER_SIZE 	8
-#define ML_CTRL_REQEUST_TYPE	0x21
-#define ML_CTRL_REQUEST			0x09
-#define ML_CTRL_VALUE			0x0	
-#define ML_CTRL_INDEX			0x0
+#define ML_CTRL_REQUEST_TYPE	0x21
+#define ML_CTRL_REQUEST		0x09
+#define ML_CTRL_VALUE		0x0	
+#define ML_CTRL_INDEX		0x0
 
 #define ML_STOP			0x00
 #define ML_UP			0x01
 #define ML_DOWN			0x02
+#if MISSILE_LAUNCHER == ML_THUNDER
+#define ML_LED			0x03
+#endif
 #define ML_LEFT			0x04
 #define ML_RIGHT		0x08
 #define ML_UP_LEFT		(ML_UP | ML_LEFT)
-#define ML_DOWN_LEFT	(ML_DOWN | ML_LEFT)
+#define ML_DOWN_LEFT		(ML_DOWN | ML_LEFT)
 #define ML_UP_RIGHT		(ML_UP | ML_RIGHT)
-#define ML_DOWN_RIGHT	(ML_DOWN | ML_RIGHT)
+#define ML_DOWN_RIGHT		(ML_DOWN | ML_RIGHT)
 #define ML_FIRE			0x10
 
 #define ML_MAX_UP		0x80 		/* 80 00 00 00 00 00 00 00 */
 #define ML_MAX_DOWN		0x40		/* 40 00 00 00 00 00 00 00 */
 #define ML_MAX_LEFT		0x04		/* 00 04 00 00 00 00 00 00 */
-#define ML_MAX_RIGHT	0x08 		/* 00 08 00 00 00 00 00 00 */
+#define ML_MAX_RIGHT		0x08 		/* 00 08 00 00 00 00 00 00 */
 
 #ifdef CONFIG_USB_DYNAMIC_MINORS
 #define ML_MINOR_BASE	0
@@ -269,6 +289,7 @@ static int ml_open(struct inode *inode, struct file *file)
 	int subminor;
 	int retval = 0;
 
+	DBG_INFO("Open device");
 	subminor = iminor(inode);
 
 	mutex_lock(&disconnect_mutex);
@@ -334,6 +355,7 @@ static int ml_release(struct inode *inode, struct file *file)
 	struct usb_ml *dev = NULL;
 	int retval = 0;
 
+	DBG_INFO("Release driver");
 	dev = file->private_data;
 
 	if (! dev) {
@@ -379,9 +401,14 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 {
 	struct usb_ml *dev;
 	int retval = 0;
+	bool policy;
+#if MISSILE_LAUNCHER == ML_THUNDER
+	static int ml_led = 1;
+#endif
 	u8 buf[8];
 	__u8 cmd = ML_STOP;
 
+	DBG_INFO("Send command");
 	dev = file->private_data;
 
 	/* Lock this object. */
@@ -411,18 +438,33 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 	}
 
 	/* FIXME: does this impose too much policy restrictions? */
-	if (! (cmd == ML_STOP || cmd == ML_UP || cmd == ML_DOWN || cmd == ML_LEFT
+	policy = (cmd == ML_STOP || cmd == ML_UP || cmd == ML_DOWN || cmd == ML_LEFT
 				|| cmd == ML_RIGHT || cmd == ML_UP_LEFT || cmd == ML_DOWN_LEFT
 				|| cmd == ML_UP_RIGHT || cmd == ML_DOWN_RIGHT 
-				|| cmd == ML_FIRE)) {
+				|| cmd == ML_FIRE);
+#if MISSILE_LAUNCHER == ML_THUNDER
+	policy = policy || (cmd == ML_LED);
+#endif
+	if (!policy) {
 		DBG_ERR("illegal command issued");
 		retval = -0x2a;		/* scnr */
 		goto unlock_exit;
 	}
 
 	memset(&buf, 0, sizeof(buf));
-	buf[0] = cmd;
-
+#if MISSILE_LAUNCHER == ML_THUNDER
+	if (cmd == ML_LED) {
+		buf[0] = ML_LED;
+		buf[1] = ml_led;
+		ml_led = 1 - ml_led;
+	} else {
+		buf[0] = 0x02;
+		buf[1] = cmd;
+	}
+#else
+	buf[0] = 0x02;
+	buf[1] = cmd;
+#endif
 	/* The interrupt-in-endpoint handler also modifies dev->command. */
 	spin_lock(&dev->cmd_spinlock);
 	dev->command = cmd;
@@ -431,7 +473,7 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 	retval = usb_control_msg(dev->udev,
 			usb_sndctrlpipe(dev->udev, 0),
 			ML_CTRL_REQUEST,
-			ML_CTRL_REQEUST_TYPE,
+			ML_CTRL_REQUEST_TYPE,
 			ML_CTRL_VALUE,
 			ML_CTRL_INDEX,
 			&buf,
@@ -476,6 +518,7 @@ static int ml_probe(struct usb_interface *interface, const struct usb_device_id
 	struct usb_endpoint_descriptor *endpoint;
 	int i, int_end_size;
 	int retval = -ENODEV;
+	DBG_INFO("Probe missile launcher");
 
 	if (! udev) {
 		DBG_ERR("udev is NULL");
@@ -491,7 +534,7 @@ static int ml_probe(struct usb_interface *interface, const struct usb_device_id
 
 	dev->command = ML_STOP;
 
-	init_MUTEX(&dev->sem);
+	sema_init(&dev->sem, 1);
 	spin_lock_init(&dev->cmd_spinlock);
 
 	dev->udev = udev;
@@ -550,11 +593,11 @@ static int ml_probe(struct usb_interface *interface, const struct usb_device_id
 		retval = -ENOMEM;
 		goto error;
 	}
-    dev->ctrl_dr->bRequestType = ML_CTRL_REQEUST_TYPE;
-    dev->ctrl_dr->bRequest = ML_CTRL_REQUEST;
-    dev->ctrl_dr->wValue = cpu_to_le16(ML_CTRL_VALUE);
-    dev->ctrl_dr->wIndex = cpu_to_le16(ML_CTRL_INDEX);
-    dev->ctrl_dr->wLength = cpu_to_le16(ML_CTRL_BUFFER_SIZE);
+	dev->ctrl_dr->bRequestType = ML_CTRL_REQUEST_TYPE;
+	dev->ctrl_dr->bRequest = ML_CTRL_REQUEST;
+	dev->ctrl_dr->wValue = cpu_to_le16(ML_CTRL_VALUE);
+	dev->ctrl_dr->wIndex = cpu_to_le16(ML_CTRL_INDEX);
+	dev->ctrl_dr->wLength = cpu_to_le16(ML_CTRL_BUFFER_SIZE);
 
 	usb_fill_control_urb(dev->ctrl_urb, dev->udev,
 			usb_sndctrlpipe(dev->udev, 0),
@@ -639,6 +682,7 @@ static int __init usb_ml_init(void)
 {
 	int result;
 
+	DBG_INFO("Register driver");
 	result = usb_register(&ml_driver);
 	if (result) {
 		DBG_ERR("registering driver failed");
