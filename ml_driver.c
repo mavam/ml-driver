@@ -62,7 +62,7 @@ if ((debug_level & DEBUG_LEVEL_CRITICAL) == DEBUG_LEVEL_CRITICAL) \
 #define ML_DEFAULT 0
 #define ML_THUNDER 1
 
-#define MISSILE_LAUNCHER ML_THUNDER
+#define MISSILE_LAUNCHER ML_DEFAULT
 
 #if MISSILE_LAUNCHER == ML_THUNDER
 
@@ -91,7 +91,9 @@ if ((debug_level & DEBUG_LEVEL_CRITICAL) == DEBUG_LEVEL_CRITICAL) \
 #define ML_STOP			0x00
 #define ML_UP			0x01
 #define ML_DOWN			0x02
+#if MISSILE_LAUNCHER == ML_THUNDER
 #define ML_LED			0x03
+#endif
 #define ML_LEFT			0x04
 #define ML_RIGHT		0x08
 #define ML_UP_LEFT		(ML_UP | ML_LEFT)
@@ -399,7 +401,10 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 {
 	struct usb_ml *dev;
 	int retval = 0;
+	bool policy;
+#if MISSILE_LAUNCHER == ML_THUNDER
 	static int ml_led = 1;
+#endif
 	u8 buf[8];
 	__u8 cmd = ML_STOP;
 
@@ -433,16 +438,21 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 	}
 
 	/* FIXME: does this impose too much policy restrictions? */
-	if (! (cmd == ML_STOP || cmd == ML_UP || cmd == ML_DOWN || cmd == ML_LEFT
+	policy = (cmd == ML_STOP || cmd == ML_UP || cmd == ML_DOWN || cmd == ML_LEFT
 				|| cmd == ML_RIGHT || cmd == ML_UP_LEFT || cmd == ML_DOWN_LEFT
 				|| cmd == ML_UP_RIGHT || cmd == ML_DOWN_RIGHT 
-				|| cmd == ML_FIRE || cmd == ML_LED)) {
+				|| cmd == ML_FIRE);
+#if MISSILE_LAUNCHER == ML_THUNDER
+	policy = policy || (cmd == ML_LED);
+#endif
+	if (!policy) {
 		DBG_ERR("illegal command issued");
 		retval = -0x2a;		/* scnr */
 		goto unlock_exit;
 	}
 
 	memset(&buf, 0, sizeof(buf));
+#if MISSILE_LAUNCHER == ML_THUNDER
 	if (cmd == ML_LED) {
 		buf[0] = ML_LED;
 		buf[1] = ml_led;
@@ -451,7 +461,10 @@ static ssize_t ml_write(struct file *file, const char __user *user_buf, size_t
 		buf[0] = 0x02;
 		buf[1] = cmd;
 	}
-
+#else
+	buf[0] = 0x02;
+	buf[1] = cmd;
+#endif
 	/* The interrupt-in-endpoint handler also modifies dev->command. */
 	spin_lock(&dev->cmd_spinlock);
 	dev->command = cmd;
