@@ -27,7 +27,7 @@
 #include <linux/mutex.h>		/* mutexes */
 #include <linux/ioctl.h>
 
-#include <asm/uaccess.h>		/* copy_*_user */
+#include <linux/uaccess.h>		/* copy_*_user */
 
 #define DEBUG_LEVEL_DEBUG		0x1F
 #define DEBUG_LEVEL_INFO		0x0F
