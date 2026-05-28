@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/wandog/workspace/missile_related/ml-driver/userspace/Twrite.c
+stdio.h
+-
+fcntl.h
+-
+sys/ioctl.h
+-
+errno.h
+-
+unistd.h
+-
+stdlib.h
+-
+

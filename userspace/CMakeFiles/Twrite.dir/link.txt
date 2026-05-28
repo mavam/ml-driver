@@ -1,0 +1,1 @@
+/usr/bin/cc    CMakeFiles/Twrite.dir/Twrite.c.o  -o Twrite 

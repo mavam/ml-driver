@@ -1,0 +1,1 @@
+/usr/bin/cc    CMakeFiles/Uspace.dir/Uspace.c.o  -o Uspace 

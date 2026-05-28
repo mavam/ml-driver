@@ -1,14 +1,14 @@
 # Uncomment the following to enable debug.
-DEBUG = y
+#DEBUG = y
 
-ifeq ($(DEBUG),y)
-	DBGFLAGS = -O -g -DML_DEBUG
-else
-	DBGFLAGS = -O2
-endif
+#ifeq ($(DEBUG),y)
+#	DBGFLAGS = -O -g -DML_DEBUG
+#else
+#	DBGFLAGS = -O2
+#endif
 
-ccflags-y += $(DBGFLAGS)
-
+#ccflags-y += $(DBGFLAGS)
+CONFIG_MODULE_SIG=n
 
 ifneq ($(KERNELRELEASE),)
 	obj-m := ml_driver.o
@@ -22,6 +22,5 @@ default:
 
 clean:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
-	rm *.symvers
 	
 endif

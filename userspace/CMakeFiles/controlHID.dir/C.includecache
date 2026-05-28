@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/wandog/workspace/missile_related/ml-driver/userspace/controlHID.c
+stdio.h
+-
+fcntl.h
+-
+sys/ioctl.h
+-
+errno.h
+-
+unistd.h
+-
+stdlib.h
+-
+unistd.h
+-
+stdlib.h
+-
+ncurses.h
+-
+

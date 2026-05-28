@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/wandog/workspace/missile_related/ml-driver/userspace/Uspace.c
+fcntl.h
+-
+stdio.h
+-
+stdlib.h
+-
+unistd.h
+-
+
